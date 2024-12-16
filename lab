@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Вихідний файл
+OUTPUT_FILE="Output.log"
+
+# Перевірка наявності привілеїв root
+if [[ $EUID -ne 0 ]]; then
+    echo "Цей сценарій потрібно запускати з правами root." >&2
+    exit 1
+fi
+
+# Перевірка наявності необхідних утиліт
+if ! command -v nmap &> /dev/null; then
+    echo "nmap не встановлено. Будь ласка, встановіть nmap." >&2
+    exit 1
+fi
+
+if ! command -v tcpdump &> /dev/null; then
+    echo "tcpdump не встановлено. Будь ласка, встановіть tcpdump." >&2
+    exit 1
+fi
+
+# Очистка/створення файлу виводу
+> "$OUTPUT_FILE"
+
+# Функція для виконання nmap
+run_nmap() {
+    echo "[INFO] Виконання nmap сканування..." | tee -a "$OUTPUT_FILE"
+    echo "\n===== NMAP SCAN START =====\n" >> "$OUTPUT_FILE"
+    nmap -A -T4 localhost >> "$OUTPUT_FILE" 2>&1
+    echo "\n===== NMAP SCAN END =====\n" >> "$OUTPUT_FILE"
+}
+
+# Функція для виконання tcpdump
+run_tcpdump() {
+    echo "[INFO] Запуск tcpdump (10 секунд запису)..." | tee -a "$OUTPUT_FILE"
+    echo "\n===== TCPDUMP START =====\n" >> "$OUTPUT_FILE"
+    timeout 10 tcpdump -i any -c 50 >> "$OUTPUT_FILE" 2>&1
+    echo "\n===== TCPDUMP END =====\n" >> "$OUTPUT_FILE"
+}
+
+# Виконання функцій
+run_nmap
+run_tcpdump
+
+# Підсумок
+echo "[INFO] Дані збережено у файл $OUTPUT_FILE"
